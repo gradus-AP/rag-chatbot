@@ -5,7 +5,7 @@
 
 # COMMAND ----------
 
-%pip install transformers langchain lxml beautifulsoup4 requests --quiet
+%pip install transformers langchain>=0.3.0 langchain-core>=0.3.0 langchain-community lxml beautifulsoup4 requests --quiet
 dbutils.library.restartPython()
 
 # COMMAND ----------

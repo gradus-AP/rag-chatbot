@@ -5,12 +5,12 @@
 
 # COMMAND ----------
 
-%run ../00-config
+%pip install transformers langchain lxml beautifulsoup4 requests --quiet
+dbutils.library.restartPython()
 
 # COMMAND ----------
 
-%pip install transformers langchain lxml beautifulsoup4 requests
-dbutils.library.restartPython()
+%run ../00-config
 
 # COMMAND ----------
 

@@ -5,12 +5,12 @@
 
 # COMMAND ----------
 
-%run ../00-config
+%pip install langchain databricks-vectorsearch mlflow --quiet
+dbutils.library.restartPython()
 
 # COMMAND ----------
 
-%pip install langchain databricks-vectorsearch mlflow
-dbutils.library.restartPython()
+%run ../00-config
 
 # COMMAND ----------
 

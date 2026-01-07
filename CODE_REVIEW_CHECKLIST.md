@@ -11,6 +11,7 @@
 7. [パフォーマンス規約](#パフォーマンス規約)
 8. [ドキュメント規約](#ドキュメント規約)
 9. [テスト規約](#テスト規約)
+10. [トラブルシューティング](#トラブルシューティング)
 
 ---
 
@@ -60,13 +61,62 @@ from config import *  # ❌ %run未使用
 
 ---
 
+### 📌 依存関係管理
+
+- [ ] **NB-008**: 必要なパッケージは各ノートブック冒頭で`%pip install`する
+- [ ] **NB-009**: `%pip install`の後は必ず`dbutils.library.restartPython()`を呼び出す
+- [ ] **NB-010**: パッケージインストールには`--quiet`オプションを使用する
+- [ ] **NB-011**: `VectorSearchClient`を使用するノートブックには`databricks-vectorsearch`をインストールする
+- [ ] **NB-012**: パッケージインストール後は`%run`で設定ファイルを読み込む（順序重要）
+
+**例（良い）:**
+```python
+# Databricks notebook source
+# COMMAND ----------
+
+# 必要なパッケージをインストール
+%pip install databricks-vectorsearch langchain --quiet
+
+# COMMAND ----------
+
+# Pythonカーネルの再起動（パッケージを有効化するため）
+dbutils.library.restartPython()
+
+# COMMAND ----------
+
+%run ../00-config
+
+# COMMAND ----------
+
+from databricks.vector_search.client import VectorSearchClient
+```
+
+**例（悪い）:**
+```python
+# COMMAND ----------
+
+%run ../00-config
+
+# COMMAND ----------
+
+# ❌ パッケージインストールが設定読み込み後
+%pip install databricks-vectorsearch
+# ❌ restartPython()なし
+
+# COMMAND ----------
+
+from databricks.vector_search.client import VectorSearchClient  # ❌ ImportError発生
+```
+
+---
+
 ### 📌 セル構成
 
-- [ ] **NB-008**: 1セルは1つの論理的な処理単位とする（50行以内推奨）
-- [ ] **NB-009**: セルの先頭にコメントで処理内容を記述する
-- [ ] **NB-010**: 長い処理は複数セルに分割する
-- [ ] **NB-011**: セルの実行順序に依存関係がある場合は明示する
-- [ ] **NB-012**: 各セクションの前に見出しセル（`%md`）を配置する
+- [ ] **NB-013**: 1セルは1つの論理的な処理単位とする（50行以内推奨）
+- [ ] **NB-014**: セルの先頭にコメントで処理内容を記述する
+- [ ] **NB-015**: 長い処理は複数セルに分割する
+- [ ] **NB-016**: セルの実行順序に依存関係がある場合は明示する
+- [ ] **NB-017**: 各セクションの前に見出しセル（`%md`）を配置する
 
 **例（良い）:**
 ```python
@@ -94,11 +144,11 @@ text_splitter = RecursiveCharacterTextSplitter(...)
 
 ### 📌 出力・表示
 
-- [ ] **NB-013**: 重要な処理結果は `print()` で明示的に出力する
-- [ ] **NB-014**: DataFrameの表示は `display()` を使用する（`show()` ではなく）
-- [ ] **NB-015**: 成功メッセージには絵文字を使用（✅, 🎉, ✓など）
-- [ ] **NB-016**: エラーメッセージには明確な記号を使用（❌, ✗など）
-- [ ] **NB-017**: 処理進捗には適切な記号を使用（⏳, 🔍, 📦など）
+- [ ] **NB-018**: 重要な処理結果は `print()` で明示的に出力する
+- [ ] **NB-019**: DataFrameの表示は `display()` を使用する（`show()` ではなく）
+- [ ] **NB-020**: 成功メッセージには絵文字を使用（✅, 🎉, ✓など）
+- [ ] **NB-021**: エラーメッセージには明確な記号を使用（❌, ✗など）
+- [ ] **NB-022**: 処理進捗には適切な記号を使用（⏳, 🔍, 📦など）
 
 **例（良い）:**
 ```python
@@ -902,6 +952,86 @@ print(f"\n✅ テスト成功率: {success_rate:.1%}")
 
 ---
 
+## 🔧 トラブルシューティング
+
+### よくあるエラーと解決方法
+
+#### ImportError: No module named 'databricks.vector_search.client'
+
+**原因**: `databricks-vectorsearch`パッケージがインストールされていない
+
+**解決方法**:
+```python
+# COMMAND ----------
+
+# 必要なパッケージをインストール
+%pip install databricks-vectorsearch --quiet
+
+# COMMAND ----------
+
+# Pythonカーネルの再起動（パッケージを有効化するため）
+dbutils.library.restartPython()
+
+# COMMAND ----------
+
+%run ../00-config
+
+# COMMAND ----------
+
+from databricks.vector_search.client import VectorSearchClient
+```
+
+**関連チェック項目**: NB-008, NB-009, NB-011, NB-012
+
+---
+
+#### ModuleNotFoundError: No module named 'langchain'
+
+**原因**: LangChain関連パッケージがインストールされていない
+
+**解決方法**:
+```python
+%pip install langchain langchain-community --quiet
+dbutils.library.restartPython()
+```
+
+**関連チェック項目**: NB-008, NB-009
+
+---
+
+#### NameError: name 'CATALOG' is not defined
+
+**原因**: `00-config.py`が読み込まれていない、または`restartPython()`後に再読み込みされていない
+
+**解決方法**:
+```python
+# restartPython()の後に必ず%runを実行
+dbutils.library.restartPython()
+
+# COMMAND ----------
+
+%run ../00-config
+```
+
+**関連チェック項目**: NB-003, NB-012
+
+---
+
+#### AnalysisException: Catalog 'rag_demo_dev' not found
+
+**原因**: Unity Catalogが作成されていない、または権限がない
+
+**解決方法**:
+```python
+# 01-setup/01-validate-environment.py を実行
+# または手動でCatalogを作成
+spark.sql(f"CREATE CATALOG IF NOT EXISTS {CATALOG}")
+```
+
+**関連チェック項目**: CF-001, SC-006
+
+---
+
 ## 🔄 チェックリスト更新
 
 このチェックリストは以下のタイミングで更新します：
@@ -912,5 +1042,5 @@ print(f"\n✅ テスト成功率: {success_rate:.1%}")
 - レビューで頻繁に指摘される項目が発見された時
 
 **最終更新日**: 2026-01-07
-**バージョン**: 1.0
+**バージョン**: 1.1
 **管理者**: ML Engineering Team

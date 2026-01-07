@@ -5,6 +5,16 @@
 
 # COMMAND ----------
 
+# 必要なパッケージをインストール
+%pip install databricks-vectorsearch --quiet
+
+# COMMAND ----------
+
+# Pythonカーネルの再起動（パッケージを有効化するため）
+dbutils.library.restartPython()
+
+# COMMAND ----------
+
 %run ../00-config
 
 # COMMAND ----------

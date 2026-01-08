@@ -15,8 +15,9 @@ dbutils.library.restartPython()
 # COMMAND ----------
 
 import os
-from langchain.chains import RetrievalQA
-from langchain_core.prompts import PromptTemplate
+from langchain.chains.retrieval import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.chat_models import ChatDatabricks
 from langchain_community.vectorstores import DatabricksVectorSearch
 from langchain_community.embeddings import DatabricksEmbeddings
@@ -60,11 +61,11 @@ TEMPLATE = """以下の情報を使って質問に日本語で簡潔に答えて
 情報:
 {context}
 
-質問: {question}
+質問: {input}
 
 回答:"""
 
-prompt = PromptTemplate(template=TEMPLATE, input_variables=["context", "question"])
+prompt = ChatPromptTemplate.from_template(TEMPLATE)
 
 print("✅ プロンプトテンプレート作成完了")
 
@@ -78,12 +79,8 @@ print(f"✅ LLMモデル接続完了: {LLM_ENDPOINT}")
 # COMMAND ----------
 
 # RAGチェーン作成
-rag_chain = RetrievalQA.from_chain_type(
-    llm=chat_model,
-    chain_type="stuff",
-    retriever=get_retriever(),
-    chain_type_kwargs={"prompt": prompt}
-)
+combine_docs_chain = create_stuff_documents_chain(chat_model, prompt)
+rag_chain = create_retrieval_chain(get_retriever(), combine_docs_chain)
 
 print("✅ RAGチェーン構築完了")
 
@@ -99,8 +96,8 @@ test_questions = [
 
 for q in test_questions:
     print(f"\n質問: {q}")
-    result = rag_chain.run({"query": q})
-    print(f"回答: {result}")
+    result = rag_chain.invoke({"input": q})
+    print(f"回答: {result['answer']}")
     print("-" * 60)
 
 print("\n✅ RAGチェーン動作確認完了")

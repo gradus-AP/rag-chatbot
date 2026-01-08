@@ -10,7 +10,11 @@
 # COMMAND ----------
 
 from databricks.sdk import WorkspaceClient
-from databricks.sdk.service.serving import EndpointCoreConfigInput, ServedModelInput
+from databricks.sdk.service.serving import (
+    EndpointCoreConfigInput,
+    ServedModelInput,
+    ServedModelInputWorkloadSize
+)
 import mlflow
 
 mlflow.set_registry_uri("databricks-uc")
@@ -47,7 +51,7 @@ endpoint_config = EndpointCoreConfigInput(
         ServedModelInput(
             model_name=MODEL_NAME,
             model_version=str(latest_version),
-            workload_size="Small",
+            workload_size=ServedModelInputWorkloadSize.SMALL,
             scale_to_zero_enabled=True
         )
     ]

@@ -5,7 +5,7 @@
 
 # COMMAND ----------
 
-%pip install databricks-vectorsearch langchain-community mlflow --quiet
+%pip install databricks-vectorsearch databricks-langchain mlflow --quiet
 dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -16,7 +16,7 @@ dbutils.library.restartPython()
 
 import os
 from databricks.vector_search.client import VectorSearchClient
-from langchain_community.llms import Databricks
+from databricks_langchain import ChatDatabricks
 
 # 認証設定
 DATABRICKS_TOKEN = dbutils.secrets.get(SECRET_SCOPE, SECRET_KEY)
@@ -43,9 +43,10 @@ print("✅ Vector Search接続完了")
 # COMMAND ----------
 
 # LLM初期化
-llm = Databricks(
-    endpoint_name=LLM_ENDPOINT,
-    model_kwargs={"temperature": 0.1, "max_tokens": 500}
+llm = ChatDatabricks(
+    endpoint=LLM_ENDPOINT,
+    temperature=0.1,
+    max_tokens=500
 )
 
 print(f"✅ LLMモデル接続完了: {LLM_ENDPOINT}")
@@ -84,7 +85,8 @@ def ask_question(question: str, num_results: int = 3) -> str:
 回答:"""
 
     # 5. LLMを呼び出し
-    answer = llm(prompt)
+    response = llm.invoke(prompt)
+    answer = response.content if hasattr(response, 'content') else str(response)
 
     return answer
 

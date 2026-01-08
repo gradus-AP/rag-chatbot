@@ -46,12 +46,9 @@ endpoint_config = EndpointCoreConfigInput(
     served_models=[
         ServedModelInput(
             model_name=MODEL_NAME,
-            model_version=latest_version,
+            model_version=str(latest_version),
             workload_size="Small",
-            scale_to_zero_enabled=True,
-            environment_vars={
-                "DATABRICKS_TOKEN": f"{{{{secrets/{SECRET_SCOPE}/{SECRET_KEY}}}}}"
-            }
+            scale_to_zero_enabled=True
         )
     ]
 )

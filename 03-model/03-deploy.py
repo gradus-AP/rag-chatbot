@@ -22,13 +22,20 @@ w = WorkspaceClient()
 print(f"📦 モデル情報取得中: {MODEL_NAME}")
 
 client = mlflow.MlflowClient()
-versions = client.get_latest_versions(MODEL_NAME, stages=["None"])
 
-if not versions:
-    raise Exception(f"❌ モデルが見つかりません: {MODEL_NAME}\n   先に 02-test-and-register を実行してください")
+# Unity Catalog対応: バージョン一覧から最新を取得
+try:
+    versions = client.search_model_versions(f"name='{MODEL_NAME}'")
 
-latest_version = versions[0].version
-print(f"✅ 最新バージョン: v{latest_version}")
+    if not versions:
+        raise Exception(f"❌ モデルが見つかりません: {MODEL_NAME}\n   先に 02-test-and-register を実行してください")
+
+    # バージョン番号でソート（降順）して最新を取得
+    latest_version = max([int(v.version) for v in versions])
+    print(f"✅ 最新バージョン: v{latest_version}")
+
+except Exception as e:
+    raise Exception(f"❌ モデル取得エラー: {e}\n   先に 02-test-and-register を実行してください")
 
 # COMMAND ----------
 

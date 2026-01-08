@@ -397,6 +397,37 @@ dbutils.library.restartPython()
 - `databricks-vectorsearch` (Vector Search)
 - `langchain_community` は非推奨
 
+### 6. LLM エンドポイント選択のベストプラクティス
+
+**RAG チャットボットに最適なエンドポイント:**
+
+| モデル | 用途 | メリット | デメリット |
+|--------|------|----------|------------|
+| **Llama 3.3 70B** ⭐ | RAG 標準 | 高速、高品質、コスト効率 | - |
+| Llama 3.1 405B | 最高品質重視 | 最高性能、複雑な推論 | 遅い、高コスト |
+| Llama 3.1 8B | プロトタイプ | 超高速、低コスト | 品質劣る |
+| GPT-5-2 | 新機能試用 | 最新機能 | 性能不明 |
+
+**推奨: `databricks-meta-llama-3-3-70b-instruct`**
+
+理由:
+- ✅ Llama 3.3 は最新世代で 405B に匹敵する性能
+- ✅ 70B なので 405B より圧倒的に高速
+- ✅ RAG には十分な性能でコスト効率が良い
+- ✅ 日本語を含む多言語サポートが優秀
+- ✅ 実用的なバランスが取れている
+
+**確認方法:**
+```python
+from databricks.sdk import WorkspaceClient
+
+w = WorkspaceClient()
+endpoints = w.serving_endpoints.list()
+
+for endpoint in endpoints:
+    print(f"  - {endpoint.name}")
+```
+
 ---
 
 ## 実行方法

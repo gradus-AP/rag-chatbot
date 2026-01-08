@@ -5,7 +5,7 @@
 
 # COMMAND ----------
 
-%pip install langchain>=0.3.0 langchain-core>=0.3.0 langchain-community databricks-vectorsearch mlflow --quiet
+%pip install langchain>=0.3.0 langchain-core>=0.3.0 langchain-community langchain-text-splitters databricks-vectorsearch mlflow --quiet
 dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -15,7 +15,7 @@ dbutils.library.restartPython()
 # COMMAND ----------
 
 import os
-from langchain.chains.retrieval_qa.base import RetrievalQA
+from langchain.chains import RetrievalQA
 from langchain_core.prompts import PromptTemplate
 from langchain_community.chat_models import ChatDatabricks
 from langchain_community.vectorstores import DatabricksVectorSearch

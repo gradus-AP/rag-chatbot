@@ -13,8 +13,8 @@ SCHEMA = "chatbot"
 # Endpoints
 VECTOR_SEARCH_ENDPOINT = f"vs_endpoint_{ENV}"
 # Databricks Foundation Model API のエンドポイント名
-# 利用可能なモデル: databricks-bge-large-en, databricks-gte-large-en など
-EMBEDDING_MODEL_ENDPOINT = "databricks-bge-large-en"  # Embedding model
+# 日本語対応: multilingual モデルを使用
+EMBEDDING_MODEL_ENDPOINT = "databricks-gte-large-en"  # 多言語対応 (日本語OK)
 LLM_ENDPOINT = "databricks-dbrx-instruct"  # LLM model
 
 # 命名規則

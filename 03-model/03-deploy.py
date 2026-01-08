@@ -52,7 +52,14 @@ endpoint_config = EndpointCoreConfigInput(
             model_name=MODEL_NAME,
             model_version=str(latest_version),
             workload_size=ServedModelInputWorkloadSize.SMALL,
-            scale_to_zero_enabled=True
+            scale_to_zero_enabled=True,
+            environment_vars={
+                "VECTOR_SEARCH_ENDPOINT": VECTOR_SEARCH_ENDPOINT,
+                "VECTOR_INDEX_NAME": VECTOR_INDEX_NAME,
+                "LLM_ENDPOINT": LLM_ENDPOINT,
+                "DATABRICKS_HOST": HOST,
+                "DATABRICKS_TOKEN": "{{secrets/" + SECRET_SCOPE + "/" + SECRET_KEY + "}}"
+            }
         )
     ]
 )
@@ -64,27 +71,81 @@ print("✅ 設定完了")
 # デプロイ実行（冪等性保証）
 print(f"\n🔄 デプロイ実行中...")
 
+# 強制再作成モード（エラー時に有効化）
+FORCE_RECREATE = True  # True にすると既存エンドポイントを削除して再作成
+
 existing = next(
     (e for e in w.serving_endpoints.list() if e.name == SERVING_ENDPOINT_NAME),
     None
 )
 
-if existing:
-    print(f"♻️  既存エンドポイント更新: {SERVING_ENDPOINT_NAME}")
-    w.serving_endpoints.update_config_and_wait(
-        name=SERVING_ENDPOINT_NAME,
-        served_models=endpoint_config.served_models
-    )
-    action = "更新"
-else:
-    print(f"🆕 新規エンドポイント作成: {SERVING_ENDPOINT_NAME}")
-    w.serving_endpoints.create_and_wait(
-        name=SERVING_ENDPOINT_NAME,
-        config=endpoint_config
-    )
-    action = "作成"
+try:
+    if existing:
+        if FORCE_RECREATE:
+            print(f"🗑️  既存エンドポイント削除: {SERVING_ENDPOINT_NAME}")
+            w.serving_endpoints.delete(SERVING_ENDPOINT_NAME)
+            import time
+            time.sleep(10)  # 削除完了を待機
 
-print(f"✅ エンドポイント{action}完了！")
+            print(f"🆕 新規エンドポイント作成: {SERVING_ENDPOINT_NAME}")
+            w.serving_endpoints.create_and_wait(
+                name=SERVING_ENDPOINT_NAME,
+                config=endpoint_config
+            )
+            action = "再作成"
+        else:
+            print(f"♻️  既存エンドポイント更新: {SERVING_ENDPOINT_NAME}")
+
+            # 現在の状態を確認
+            current_state = w.serving_endpoints.get(SERVING_ENDPOINT_NAME)
+            print(f"   現在の状態: {current_state.state}")
+
+            w.serving_endpoints.update_config_and_wait(
+                name=SERVING_ENDPOINT_NAME,
+                served_models=endpoint_config.served_models
+            )
+            action = "更新"
+    else:
+        print(f"🆕 新規エンドポイント作成: {SERVING_ENDPOINT_NAME}")
+        w.serving_endpoints.create_and_wait(
+            name=SERVING_ENDPOINT_NAME,
+            config=endpoint_config
+        )
+        action = "作成"
+
+    print(f"✅ エンドポイント{action}完了！")
+
+except Exception as e:
+    print(f"\n❌ デプロイ失敗: {e}")
+
+    # 詳細なエラー情報を取得
+    try:
+        endpoint = w.serving_endpoints.get(SERVING_ENDPOINT_NAME)
+        print(f"\n📊 エンドポイント状態:")
+        print(f"   State: {endpoint.state}")
+
+        if endpoint.state and endpoint.state.config_update:
+            print(f"   Config Update: {endpoint.state.config_update}")
+
+        # Pending configの確認
+        if hasattr(endpoint, 'pending_config') and endpoint.pending_config:
+            print(f"\n⏳ Pending Config:")
+            print(f"   {endpoint.pending_config}")
+
+        # Tagsの確認
+        if hasattr(endpoint, 'tags') and endpoint.tags:
+            print(f"\n🏷️  Tags:")
+            for tag in endpoint.tags:
+                print(f"   {tag.key}: {tag.value}")
+
+    except Exception as detail_error:
+        print(f"詳細情報の取得に失敗: {detail_error}")
+
+    print(f"\n💡 解決方法:")
+    print(f"   1. FORCE_RECREATE = True に設定して再実行")
+    print(f"   2. または UI で手動削除: Serving → {SERVING_ENDPOINT_NAME} → Delete")
+
+    raise
 
 # COMMAND ----------
 

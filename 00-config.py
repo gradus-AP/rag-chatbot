@@ -12,8 +12,10 @@ SCHEMA = "chatbot"
 
 # Endpoints
 VECTOR_SEARCH_ENDPOINT = f"vs_endpoint_{ENV}"
-EMBEDDING_MODEL_ENDPOINT = "text-embedding-ada-002"
-LLM_ENDPOINT = "databricks-dbrx-instruct"
+# Databricks Foundation Model API のエンドポイント名
+# 利用可能なモデル: databricks-bge-large-en, databricks-gte-large-en など
+EMBEDDING_MODEL_ENDPOINT = "databricks-bge-large-en"  # Embedding model
+LLM_ENDPOINT = "databricks-dbrx-instruct"  # LLM model
 
 # 命名規則
 def get_table_name(name):

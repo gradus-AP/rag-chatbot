@@ -349,15 +349,21 @@ for endpoint in endpoints:
 **または UI で確認:**
 - Databricks Workspace → Serving → Serving endpoints
 
-**よくある正しいエンドポイント名:**
-- `databricks-meta-llama-3-1-70b-instruct`
+**利用可能なエンドポイント (確認済み):**
+- `databricks-meta-llama-3-3-70b-instruct` ✅ (採用)
 - `databricks-meta-llama-3-1-405b-instruct`
-- `databricks-mixtral-8x7b-instruct`
+- `databricks-meta-llama-3-1-8b-instruct`
+- `databricks-gpt-5-2`
+- その他多数
 
-**解決策 (TODO):**
-- 正しいエンドポイント名を確認後、`00-config.py` の `LLM_ENDPOINT` を修正
+**解決策:**
+- `00-config.py` の `LLM_ENDPOINT` を `databricks-meta-llama-3-3-70b-instruct` に修正
+- Llama 3.3 70B は最新世代で、405B に匹敵する性能 + 高速 + コスト効率
 
-**ステータス:** 🔴 **未解決**
+**修正コミット:**
+- `XXXXXXX` Fix LLM endpoint to use Llama 3.3 70B model
+
+**ステータス:** ✅ **解決済み**
 
 ---
 

@@ -1,11 +1,11 @@
 # Databricks notebook source
 # ========================================
-# RAGチェーン構築
+# RAGチェーン構築（Databricks SDK + LangChain Community）
 # ========================================
 
 # COMMAND ----------
 
-%pip install --upgrade databricks-langchain langchain-community langchain>=0.3.0 langchain-core>=0.3.0 databricks-sql-connector databricks-vectorsearch mlflow --quiet
+%pip install databricks-vectorsearch langchain-community mlflow --quiet
 dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -15,74 +15,80 @@ dbutils.library.restartPython()
 # COMMAND ----------
 
 import os
-from langchain.chains.retrieval import create_retrieval_chain
-from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_community.chat_models import ChatDatabricks
-from langchain_community.vectorstores import DatabricksVectorSearch
-from langchain_community.embeddings import DatabricksEmbeddings
 from databricks.vector_search.client import VectorSearchClient
+from langchain_community.llms import Databricks
 
 # 認証設定
-os.environ['DATABRICKS_TOKEN'] = dbutils.secrets.get(SECRET_SCOPE, SECRET_KEY)
-os.environ["DATABRICKS_HOST"] = HOST
+DATABRICKS_TOKEN = dbutils.secrets.get(SECRET_SCOPE, SECRET_KEY)
+os.environ['DATABRICKS_TOKEN'] = DATABRICKS_TOKEN
+os.environ['DATABRICKS_HOST'] = HOST
 
 print("✅ 環境変数設定完了")
 
 # COMMAND ----------
 
-# Retriever構築
-def get_retriever():
-    '''Vector Searchベースのretrieverを返す'''
-    vsc = VectorSearchClient(
-        workspace_url=HOST,
-        personal_access_token=os.environ["DATABRICKS_TOKEN"]
-    )
-    vs_index = vsc.get_index(
-        endpoint_name=VECTOR_SEARCH_ENDPOINT,
-        index_name=VECTOR_INDEX_NAME
-    )
-    embedding = DatabricksEmbeddings(endpoint=EMBEDDING_MODEL_ENDPOINT)
-    vectorstore = DatabricksVectorSearch(
-        vs_index,
-        text_column="content",
-        embedding=embedding
-    )
-    return vectorstore.as_retriever()
+# Vector Search クライアント
+vsc = VectorSearchClient(
+    workspace_url=HOST,
+    personal_access_token=DATABRICKS_TOKEN
+)
 
-print("✅ Retriever関数定義完了")
+vs_index = vsc.get_index(
+    endpoint_name=VECTOR_SEARCH_ENDPOINT,
+    index_name=VECTOR_INDEX_NAME
+)
+
+print("✅ Vector Search接続完了")
 
 # COMMAND ----------
 
-# プロンプトテンプレート
-TEMPLATE = """以下の情報を使って質問に日本語で簡潔に答えてください。
-答えがわからない場合は「わかりません」と答えてください。
-
-情報:
-{context}
-
-質問: {input}
-
-回答:"""
-
-prompt = ChatPromptTemplate.from_template(TEMPLATE)
-
-print("✅ プロンプトテンプレート作成完了")
-
-# COMMAND ----------
-
-# LLMモデル
-chat_model = ChatDatabricks(endpoint=LLM_ENDPOINT, max_tokens=500)
+# LLM初期化
+llm = Databricks(
+    endpoint_name=LLM_ENDPOINT,
+    model_kwargs={"temperature": 0.1, "max_tokens": 500}
+)
 
 print(f"✅ LLMモデル接続完了: {LLM_ENDPOINT}")
 
 # COMMAND ----------
 
-# RAGチェーン作成
-combine_docs_chain = create_stuff_documents_chain(chat_model, prompt)
-rag_chain = create_retrieval_chain(get_retriever(), combine_docs_chain)
+# RAG関数
+def ask_question(question: str, num_results: int = 3) -> str:
+    """質問に対してRAGで回答を生成"""
 
-print("✅ RAGチェーン構築完了")
+    # 1. Vector Searchで関連文書を検索
+    search_results = vs_index.similarity_search(
+        query_text=question,
+        columns=["content", "url"],
+        num_results=num_results
+    )
+
+    # 2. 検索結果から文書を抽出
+    documents = search_results.get('result', {}).get('data_array', [])
+
+    if not documents:
+        return "関連する情報が見つかりませんでした。"
+
+    # 3. コンテキストを構築
+    context = "\n\n".join([doc[0] for doc in documents])
+
+    # 4. プロンプトを作成
+    prompt = f"""以下の情報を使って質問に日本語で簡潔に答えてください。
+答えがわからない場合は「わかりません」と答えてください。
+
+情報:
+{context}
+
+質問: {question}
+
+回答:"""
+
+    # 5. LLMを呼び出し
+    answer = llm(prompt)
+
+    return answer
+
+print("✅ RAG関数定義完了")
 
 # COMMAND ----------
 
@@ -96,8 +102,8 @@ test_questions = [
 
 for q in test_questions:
     print(f"\n質問: {q}")
-    result = rag_chain.invoke({"input": q})
-    print(f"回答: {result['answer']}")
+    answer = ask_question(q)
+    print(f"回答: {answer}")
     print("-" * 60)
 
-print("\n✅ RAGチェーン動作確認完了")
+print("\n✅ RAG動作確認完了")
